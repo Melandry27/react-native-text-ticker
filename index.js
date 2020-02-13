@@ -20,6 +20,7 @@ export const TextTickAnimationType = Object.freeze({
 })
 
 export default class TextMarquee extends PureComponent {
+  _isMounted = false
 
   static propTypes = {
     style:             Text.propTypes.style,
@@ -80,6 +81,7 @@ export default class TextMarquee extends PureComponent {
     if (marqueeOnMount) {
       this.startAnimation(marqueeDelay)
     }
+    this._isMounted = true
   }
 
   componentDidUpdate(prevProps) {
@@ -92,6 +94,7 @@ export default class TextMarquee extends PureComponent {
     this.stopAnimation();
     // always stop timers when unmounting, common source of crash
     this.clearTimeout();
+    this._isMounted = false
   }
 
   startAnimation = (timeDelay) => {
@@ -224,12 +227,13 @@ export default class TextMarquee extends PureComponent {
         this.textWidth = textWidth
         this.distance = textWidth - containerWidth + shouldAnimateTreshold
 
-        this.setState({
-          // Is 1 instead of 0 to get round rounding errors from:
-          // https://github.com/facebook/react-native/commit/a534672
-          contentFits:  this.distance <= 1,
-          shouldBounce: this.distance < this.containerWidth / 8
-        })
+        if(this._isMounted){
+          this.setState({
+            // Is 1 instead of 0 to get round rounding errors from:
+            // https://github.com/facebook/react-native/commit/a534672
+            contentFits:  this.distance <= 1,
+            shouldBounce: this.distance < this.containerWidth / 8
+          })}
         // console.log(`distance: ${this.distance}, contentFits: ${this.state.contentFits}`)
         resolve([])
       } catch (error) {
@@ -240,8 +244,9 @@ export default class TextMarquee extends PureComponent {
 
   invalidateMetrics = () => {
     this.distance = null
-    this.setState({ contentFits: true })
-  }
+    if(this._isMounted){
+      this.setState({ contentFits: true })}
+    }
 
   clearTimeout() {
     if (this.timer) {
@@ -257,11 +262,15 @@ export default class TextMarquee extends PureComponent {
 
   resetScroll = () => {
     this.clearTimeout()
-    this.setState({ isScrolling: true })
-    this.animatedValue.setValue(0)
-    this.setTimeout(() => {
-      this.setState({ isScrolling: false })
-      this.start()
+    if(this._isMounted){
+      this.setState({ isScrolling: true })
+    }
+      this.animatedValue.setValue(0)
+      this.setTimeout(() => {
+      if(this._isMounted){
+        this.setState({ isScrolling: false })
+      }
+        this.start()
     }, this.props.marqueeDelay || 3000)
   }
 
